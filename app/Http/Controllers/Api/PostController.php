@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Validation\ValidationException;
 
 class PostController extends Controller
 {
@@ -20,14 +22,21 @@ class PostController extends Controller
 
     public function store(Request $request)
     {
-        $title = $request->title;
-        $body = $request->body;
+        try {
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'body' => 'required|string',
+                'user_id' => 'required|exists:users,id',
+            ]);
 
-        $post = Post::create([
-            "title" => $title,
-            "body" => $body
-        ]);
-        return $post;
+            $post = Post::create($validated);
+
+            return response()->json($post, 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'errors' => $e->errors(),
+            ], 422);
+        }
     }
 
     public function update(Post $post, Request $request)
